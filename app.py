@@ -1,149 +1,149 @@
+# app.py
+
 import gradio as gr
-import requests  # For making HTTP requests
-import json      # For parsing JSON and json.JSONDecodeError
+import requests
+import json
 
 # --- Configuration ---
-# !!! IMPORTANT: PASTE THE CORRECT MODAL DEPLOYMENT URL HERE !!!
-# This URL was provided when you ran `modal deploy modal_logic.py`
-# Example: "https://yourusername--ai-meeting-processor-vX-your-function-name.modal.run"
-MODAL_ENDPOINT_URL = "https://mehdinathani--ai-meeting-processor-v6-4-no-await-process-02ef21.modal.run" # <-- YOUR ACTUAL URL
+# !!! IMPORTANT: PASTE THE CORRECT MODAL DEPLOYMENT URL FOR "ai-meeting-processor-v6-5-features" HERE !!!
+MODAL_ENDPOINT_URL = "https://mehdinathani--ai-meeting-processor-v6-5-features-process-069515.modal.run"
 
-# --- Function to Call the Modal LLM Service ---
-def get_all_insights(transcript_text):
-    """
-    Calls the Modal endpoint to get the summary, decisions, and action items
-    for the given meeting transcript.
-    """
-    # Default error messages for each output field
+# --- Example Transcript ---
+EXAMPLE_TRANSCRIPT = """Meeting Title: Project Alpha Sync
+Date: 2025-06-10
+Attendees: Alice, Bob, Charlie, Diana
+
+Alice: Okay team, let's kick off. Bob, any updates on the user authentication module?
+Bob: Yes, good progress. I've completed the backend logic and basic unit tests. I expect to have the API endpoints ready for integration by Wednesday. I did hit a snag with the new MFA library, it seems to have a conflict with our current logging setup. Will need some time to debug that, or find an alternative.
+Alice: Okay, thanks Bob. Prioritize getting the core endpoints ready. We can tackle the MFA conflict as a separate issue if it becomes a blocker. Charlie, how are the UI mockups for the dashboard coming along?
+Charlie: Almost there. I've incorporated the feedback from last week's review. I should have the final mockups ready for review by end of day tomorrow. Diana, could you schedule a 30-min review slot for Thursday morning?
+Diana: Will do, Charlie. I'll send out an invite.
+Alice: Great. And Diana, any updates on the Q3 marketing campaign proposal?
+Diana: The draft is ready. Key focus areas are social media engagement and a partnership with 'TechExplained' YouTube channel. I need budget approval for the influencer collaboration, around $5,000.
+Alice: Understood. Bob, please ensure your API docs are clear for Charlie. Charlie, focus on the main dashboard view. Diana, please send me the budget proposal by EOD today for review. Any other business? No? Okay, good meeting everyone.
+"""
+
+# --- Functions for Gradio ---
+def clear_all_fields():
+    """Clears all input and output fields."""
+    return "", "", "", "", "" # transcript, summary, decisions, actions, sentiment
+
+def load_example():
+    """Loads the example transcript into the input field and clears outputs."""
+    return EXAMPLE_TRANSCRIPT, "", "", "", ""
+
+def get_all_insights_from_modal(transcript_text):
+    """Calls the Modal endpoint and handles response."""
     err_summary = "Error: Could not retrieve summary."
     err_decisions = "Error: Could not retrieve decisions."
     err_actions = "Error: Could not retrieve action items."
+    err_sentiment = "Error: Could not retrieve sentiment."
 
-    # Validate Modal endpoint configuration
-    if "YOUR_MODAL_DEPLOYED_WEB_ENDPOINT_URL_HERE" in MODAL_ENDPOINT_URL or not MODAL_ENDPOINT_URL or "https://mehdinathani--ai-meeting-processor-v6-4-no-await-process-02ef21.modal.run" != MODAL_ENDPOINT_URL : # A bit of a self-check if placeholder is still there
-        # This check should be updated if you copy this code for a new endpoint.
-        # For now, it also serves as a reminder if the placeholder URL is accidentally used.
-        # if MODAL_ENDPOINT_URL == "YOUR_MODAL_DEPLOYED_WEB_ENDPOINT_URL_HERE": # Simpler check
-        print(f"ERROR: MODAL_ENDPOINT_URL is not correctly configured. Current value: {MODAL_ENDPOINT_URL}")
-        return "Modal endpoint URL not correctly configured in `app.py`. Please verify.", err_decisions, err_actions
+    if MODAL_ENDPOINT_URL == "YOUR_NEW_MODAL_ENDPOINT_URL_HERE_FOR_V6_5" or not MODAL_ENDPOINT_URL.startswith("https://"):
+        error_msg = "Modal endpoint URL not correctly configured in `app.py`."
+        print(f"ERROR: {error_msg} Current value: {MODAL_ENDPOINT_URL}")
+        return error_msg, err_decisions, err_actions, err_sentiment
 
-    # Validate transcript input
     if not transcript_text.strip():
-        return "Please enter some transcript text first.", "", ""
+        return "Please enter some transcript text first.", "", "", "", ""
 
-    print(f"INFO: Sending transcript to Modal endpoint: {MODAL_ENDPOINT_URL}")
-    print(f"INFO: Transcript (first 100 chars): {transcript_text[:100]}...")
-
+    print(f"INFO: Sending transcript to Modal: {MODAL_ENDPOINT_URL}")
     headers = {"Content-Type": "application/json"}
-    # The payload key "transcript" must match what your Modal endpoint function expects.
     payload = {"transcript": transcript_text}
 
     try:
-        # Make the POST request to the Modal endpoint
-        # Increased timeout to accommodate model loading and processing on Modal.
-        response = requests.post(MODAL_ENDPOINT_URL, headers=headers, json=payload, timeout=300) # 5 minutes timeout
+        response = requests.post(MODAL_ENDPOINT_URL, headers=headers, json=payload, timeout=300) # 5 min timeout
+        print(f"INFO: Response from Modal. Status: {response.status_code}")
+        print(f"DEBUG: Raw response text: >>>\n{response.text}\n<<<")
+        response.raise_for_status()
         
-        print(f"INFO: Response received from Modal. Status Code: {response.status_code}")
-        
-        # --- Crucial Debugging Step: Print raw response text ---
-        print(f"DEBUG: Raw response text from Modal: >>>\n{response.text}\n<<<")
-        # --- End Debugging Step ---
+        results = response.json()
+        if results is None: # Should not happen if JSON is valid but empty object, but good check
+            raise json.JSONDecodeError("JSON parsed to None", response.text, 0)
 
-        # Raise an HTTPError for bad responses (4xx client errors or 5xx server errors)
-        response.raise_for_status() 
-        
-        # Attempt to parse the response as JSON
-        try:
-            results = response.json() # Expecting a dictionary from Modal
-        except json.JSONDecodeError as json_err:
-            print(f"ERROR: Failed to decode JSON from Modal response. Error: {json_err}")
-            print(f"DEBUG: The raw response (printed above) was not valid JSON.")
-            return "Error: AI service returned an invalid response format (not JSON).", err_decisions, err_actions
-
-        # Check if parsing JSON resulted in None (e.g., if Modal returned JSON 'null')
-        if results is None:
-            print("ERROR: response.json() parsed to None. Modal endpoint might have returned JSON 'null'.")
-            return "Error: AI service returned no valid data structure.", err_decisions, err_actions
-        
-        # Check if the Modal endpoint itself reported an error within the JSON response
-        if "error" in results and results["error"]:
+        if "error" in results and results["error"]: # Check for error key from Modal service itself
             print(f"ERROR: AI Service (Modal) reported an error: {results['error']}")
-            # Display the service's error in the summary field, or create a dedicated error display
-            return f"AI Service Error: {results['error']}", "", ""
+            # Display the service's error in the summary field, or a dedicated error display
+            return f"AI Service Error: {results['error']}", "", "", ""
 
-        # Extract the insights, providing default messages if keys are missing
-        summary = results.get("summary", "Summary not provided by AI service.")
-        decisions = results.get("decisions", "Decisions not provided by AI service.")
-        actions = results.get("actions", "Action items not provided by AI service.")
+        summary = results.get("summary", "Summary not provided.")
+        decisions = results.get("decisions", "Decisions not provided.")
+        actions = results.get("actions", "Action items not provided.")
+        sentiment = results.get("sentiment", "Sentiment not provided.")
         
-        print("INFO: Successfully parsed insights from Modal.")
-        return summary, decisions, actions
+        print("INFO: Successfully parsed insights.")
+        return summary, decisions, actions, sentiment
 
     except requests.exceptions.Timeout:
-        print(f"ERROR: Request to Modal timed out after 300 seconds.")
-        return "The request to the AI service timed out. It might be processing a very long transcript or experiencing high load. Please try again with a shorter text or later.", err_decisions, err_actions
-    
+        msg = "Request to AI service timed out. Please try again."
+        print(f"ERROR: {msg}")
+        return msg, err_decisions, err_actions, err_sentiment
     except requests.exceptions.HTTPError as http_err:
-        # This block will be entered if response.raise_for_status() detects an HTTP error.
-        # The raw response text (which might contain Modal's error details) was already printed.
-        print(f"ERROR: HTTP error occurred: {http_err} - Status: {http_err.response.status_code}")
-        return f"Error connecting to AI service (HTTP {http_err.response.status_code} {http_err.response.reason}). Check Modal logs for details (raw response printed above).", err_decisions, err_actions
-
-    except requests.exceptions.RequestException as req_err:
-        # For other network issues (DNS failure, connection refused, etc.)
-        print(f"ERROR: Network request exception occurred: {req_err}")
-        return f"Error connecting to AI service: {req_err}. Please check your network connection and the endpoint URL.", err_decisions, err_actions
-    
+        msg = f"HTTP error: {http_err.response.status_code} {http_err.response.reason}. Check Modal logs."
+        print(f"ERROR: {msg}\nRaw Response: {http_err.response.text}")
+        return msg, err_decisions, err_actions, err_sentiment
+    except (requests.exceptions.RequestException, json.JSONDecodeError) as req_err:
+        msg = f"Network/JSON error: {req_err}. Check URL & Modal status."
+        print(f"ERROR: {msg}")
+        return msg, err_decisions, err_actions, err_sentiment
     except Exception as e:
-        # Catch any other unexpected errors during the process
-        print(f"ERROR: An unexpected error occurred in get_all_insights: {type(e).__name__} - {e}")
-        return f"A critical unexpected error occurred in the Gradio app: {e}. Please check the application logs.", err_decisions, err_actions
-
+        msg = f"Critical unexpected error in Gradio app: {e}"
+        print(f"ERROR: {msg}")
+        return msg, err_decisions, err_actions, err_sentiment
 
 # --- Gradio UI Definition ---
-with gr.Blocks(title="AI Meeting Assistant", theme=gr.themes.Soft()) as app:
-    gr.Markdown("# 🚀 AI Meeting Assistant 🚀")
-    gr.Markdown("Paste your meeting transcript below to extract a summary, key decisions, and action items.")
+with gr.Blocks(title="AI Meeting Assistant Enhanced", theme=gr.themes.Soft()) as app_ui:
+    gr.Markdown("# 🚀 AI Meeting Assistant - Enhanced Insights 🚀")
+    gr.Markdown("Paste your meeting transcript to extract summary, decisions, action items, and sentiment.")
 
     with gr.Row():
         transcript_input = gr.Textbox(
-            lines=15,
-            label="Paste Full Meeting Transcript Here",
+            lines=15, label="Paste Full Meeting Transcript Here",
             placeholder="Enter the complete meeting transcript..."
         )
 
-    process_button = gr.Button("✨ Get Insights!", variant="primary")
-
-    gr.Markdown("---") # Visual separator
+    with gr.Row():
+        process_button = gr.Button("✨ Get All Insights!", variant="primary")
+        clear_button = gr.Button("Clear All")
+        example_button = gr.Button("Load Example Transcript")
+    
+    gr.Markdown("---")
     gr.Markdown("## 💡 Insights Extracted:")
 
-    # Using Tabs to neatly organize the different types of insights
     with gr.Tabs():
         with gr.TabItem("Summary"):
-            summary_output = gr.Textbox(
-                label="Meeting Summary", 
-                interactive=False, # Output field, not editable by user
-                lines=10 
-            )
-        with gr.TabItem("Key Decisions"):
-            decisions_output = gr.Textbox(
-                label="Key Decisions Made", 
-                interactive=False, 
-                lines=7 
-            )
-        with gr.TabItem("Action Items"):
-            action_items_output = gr.Textbox(
-                label="Action Items Identified", 
-                interactive=False, 
-                lines=7 
-            )
+            summary_output = gr.Textbox(label="Meeting Summary", interactive=False, lines=10)
+        with gr.TabItem("Key Decisions (Markdown)"):
+            # Changed to Markdown component
+            decisions_output = gr.Markdown(label="Key Decisions Made")
+        with gr.TabItem("Action Items (Markdown)"):
+            # Changed to Markdown component
+            action_items_output = gr.Markdown(label="Action Items Identified")
+        with gr.TabItem("Sentiment Analysis"):
+            sentiment_output = gr.Textbox(label="Overall Meeting Sentiment", interactive=False, lines=5) # Or gr.Markdown if sentiment output is formatted
 
-    # Connect the button click event to the 'get_all_insights' function
+    # --- Connect UI Elements to Functions ---
     process_button.click(
-        fn=get_all_insights,
-        inputs=[transcript_input], # The transcript_input Textbox is the input
-        outputs=[summary_output, decisions_output, action_items_output], # Results go to these Textboxes
-        api_name="get_insights" # Optional: allows calling this function via Gradio's API if hosted
+        fn=get_all_insights_from_modal,
+        inputs=[transcript_input],
+        outputs=[summary_output, decisions_output, action_items_output, sentiment_output],
+        api_name="get_insights_v2",
+        show_progress="full" # Adds a progress indicator during processing
+    )
+
+    # Temporary list for clearing/loading examples
+    all_outputs = [summary_output, decisions_output, action_items_output, sentiment_output]
+    
+    clear_button.click(
+        fn=clear_all_fields,
+        inputs=None, # No direct inputs needed for clear
+        outputs=[transcript_input] + all_outputs
+    )
+    
+    example_button.click(
+        fn=load_example,
+        inputs=None, # No direct inputs needed for load example
+        outputs=[transcript_input] + all_outputs
     )
 
     gr.Markdown("---")
@@ -151,6 +151,4 @@ with gr.Blocks(title="AI Meeting Assistant", theme=gr.themes.Soft()) as app:
 
 # --- Launch the Gradio App ---
 if __name__ == "__main__":
-    # debug=True provides helpful debugging information in the console.
-    # show_error=True displays Python errors directly in the browser during development.
-    app.launch(debug=True, show_error=True)
+    app_ui.launch(debug=True, show_error=True)

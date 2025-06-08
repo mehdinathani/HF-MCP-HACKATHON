@@ -4,3 +4,6 @@ accelerate>=0.27.0
 sentencepiece
 bitsandbytes>=0.42.0
 huggingface_hub
+gradio>=3.40.0  # It's good to pin to a version you know works, or use >= for flexibility
+requests>=2.25.0 # For making HTTP calls to your Modal endpoints
+# Add any other libraries if your app.py directly imports them

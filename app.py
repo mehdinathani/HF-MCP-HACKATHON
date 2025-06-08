@@ -5,96 +5,160 @@ import requests
 import json
 
 # --- Configuration ---
-# !!! IMPORTANT: PASTE THE CORRECT MODAL DEPLOYMENT URL FOR "ai-meeting-processor-v6-5-features" HERE !!!
-MODAL_ENDPOINT_URL = "https://mehdinathani--ai-meeting-processor-v6-5-features-process-069515.modal.run"
+# MAIN INSIGHTS ENDPOINT (for summary, decisions, actions, sentiment)
+MODAL_INSIGHTS_ENDPOINT_URL = "https://mehdinathani--ai-meeting-insights-service-v2-get-insights.modal.run"
+# Q&A ENDPOINT (will likely be the main URL + /qna or similar - CHECK MODAL DEPLOYMENT OUTPUT)
+MODAL_QNA_ENDPOINT_URL = "https://mehdinathani--ai-meeting-qna-service-v2-1-guardrails-ask-74022e.modal.run"
 
-# --- Example Transcript ---
-EXAMPLE_TRANSCRIPT = """Meeting Title: Project Alpha Sync
-Date: 2025-06-10
-Attendees: Alice, Bob, Charlie, Diana
 
-Alice: Okay team, let's kick off. Bob, any updates on the user authentication module?
-Bob: Yes, good progress. I've completed the backend logic and basic unit tests. I expect to have the API endpoints ready for integration by Wednesday. I did hit a snag with the new MFA library, it seems to have a conflict with our current logging setup. Will need some time to debug that, or find an alternative.
-Alice: Okay, thanks Bob. Prioritize getting the core endpoints ready. We can tackle the MFA conflict as a separate issue if it becomes a blocker. Charlie, how are the UI mockups for the dashboard coming along?
-Charlie: Almost there. I've incorporated the feedback from last week's review. I should have the final mockups ready for review by end of day tomorrow. Diana, could you schedule a 30-min review slot for Thursday morning?
-Diana: Will do, Charlie. I'll send out an invite.
-Alice: Great. And Diana, any updates on the Q3 marketing campaign proposal?
-Diana: The draft is ready. Key focus areas are social media engagement and a partnership with 'TechExplained' YouTube channel. I need budget approval for the influencer collaboration, around $5,000.
-Alice: Understood. Bob, please ensure your API docs are clear for Charlie. Charlie, focus on the main dashboard view. Diana, please send me the budget proposal by EOD today for review. Any other business? No? Okay, good meeting everyone.
-"""
+# --- Example Transcript (keep as is) ---
+EXAMPLE_TRANSCRIPT = """Meeting Transcript
+Date: June 5, 2025
+Time: 10:00 AM - 11:00 AM
+Location: Virtual (Zoom)
+Participants: Alex Johnson (AJ), Maria Chen (MC), Raj Patel (RP), Sarah Lee (SL)
+
+---
+
+[10:00 AM] AJ: Good morning, everyone! Thanks for joining today’s project update meeting. Let’s get started with a quick round of updates. Maria, can you kick us off?
+
+[10:02 AM] MC: Sure, Alex. The development team has completed the initial wireframes for the new app interface. We’re ready to share them for feedback by end of week. We’re also on track with the backend API integration, about 60% done.
+
+[10:05 AM] RP: That’s great, Maria. On the marketing side, we’ve finalized the campaign strategy for Q3. We’re focusing on social media ads and have a draft budget ready. Sarah, how’s the content creation going?
+
+[10:08 AM] SL: Content’s coming along well. We’ve got blog posts and video scripts drafted for the launch. I’ll need input from Maria’s team on technical details to ensure accuracy. Can we set up a sync later this week?
+
+[10:10 AM] MC: Absolutely, let’s do Thursday afternoon. I’ll send a calendar invite.
+
+[10:12 AM] AJ: Sounds good. Any roadblocks or resource needs anyone wants to flag?
+
+[10:14 AM] RP: We might need additional budget for influencer partnerships. I’ll put together a proposal and share it by tomorrow.
+
+[10:16 AM] SL: No major issues here, but I’d appreciate a quicker turnaround on design assets from the creative team.
+
+[10:18 AM] AJ: Noted, Raj and Sarah. I’ll follow up with the creative team and review the budget proposal. Let’s move to next steps. Maria, what’s the timeline for the wireframe feedback?
+
+[10:20 AM] MC: We’d like feedback by next Monday to stay on schedule. I’ll circulate the wireframes tomorrow morning.
+
+[10:22 AM] AJ: Perfect. Raj, can you align the marketing timeline with that?
+
+[10:23 AM] RP: Yep, we’ll sync our campaign prep to launch alongside the app release. I’ll confirm dates after Maria’s team finalizes the dev schedule.
+
+[10:25 AM] SL: I’ll have the content team prioritize assets to match that timeline too.
+
+[10:27 AM] AJ: Excellent. Anything else before we wrap up?
+
+[10:28 AM] MC: Just a heads-up, we might need an extra developer for the final sprint. I’ll confirm after reviewing the workload.
+
+[10:30 AM] AJ: Okay, keep me posted. Thanks, everyone, for the updates. Let’s reconvene next week, same time. I’ll send a summary of action items by EOD.
+
+[10:32 AM] All: Sounds good, thanks!
+
+[Meeting adjourned at 10:32 AM]
+
+---
+
+Action Items:
+- Maria: Share wireframes by tomorrow, schedule sync with Sarah for Thursday.
+- Raj: Submit influencer budget proposal by tomorrow.
+- Sarah: Coordinate with creative team for faster design asset delivery.
+- Alex: Follow up on creative team delays and review budget proposal.""" # Truncated for brevity
 
 # --- Functions for Gradio ---
 def clear_all_fields():
-    """Clears all input and output fields."""
-    return "", "", "", "", "" # transcript, summary, decisions, actions, sentiment
+    return "", "", "", "", "", "", "" # transcript, summary, decisions, actions, sentiment, question, answer
 
 def load_example():
-    """Loads the example transcript into the input field and clears outputs."""
-    return EXAMPLE_TRANSCRIPT, "", "", "", ""
+    return EXAMPLE_TRANSCRIPT, "", "", "", "", "", "" # transcript, summary, decisions, actions, sentiment, question, answer
 
 def get_all_insights_from_modal(transcript_text):
-    """Calls the Modal endpoint and handles response."""
+    # ... (This function remains mostly the same, just ensure MODAL_INSIGHTS_ENDPOINT_URL is used) ...
+    # ... (and it returns 4 values for the 4 insight types) ...
     err_summary = "Error: Could not retrieve summary."
     err_decisions = "Error: Could not retrieve decisions."
     err_actions = "Error: Could not retrieve action items."
     err_sentiment = "Error: Could not retrieve sentiment."
 
-    if MODAL_ENDPOINT_URL == "YOUR_NEW_MODAL_ENDPOINT_URL_HERE_FOR_V6_5" or not MODAL_ENDPOINT_URL.startswith("https://"):
-        error_msg = "Modal endpoint URL not correctly configured in `app.py`."
-        print(f"ERROR: {error_msg} Current value: {MODAL_ENDPOINT_URL}")
+    # Use the specific insights endpoint URL
+    if MODAL_INSIGHTS_ENDPOINT_URL == "YOUR_MODAL_URL_FOR_ai-meeting-processor-v6-6-qna_MAIN_ENDPOINT" or \
+       not MODAL_INSIGHTS_ENDPOINT_URL or \
+       not MODAL_INSIGHTS_ENDPOINT_URL.startswith("https://"):
+        error_msg = "Insights Modal endpoint URL not correctly configured in `app.py`."
+        print(f"ERROR: {error_msg} Current value: {MODAL_INSIGHTS_ENDPOINT_URL}")
         return error_msg, err_decisions, err_actions, err_sentiment
 
     if not transcript_text.strip():
-        return "Please enter some transcript text first.", "", "", "", ""
-
-    print(f"INFO: Sending transcript to Modal: {MODAL_ENDPOINT_URL}")
+        return "Please enter some transcript text first.", "", "", "", "" # Added one empty string for sentiment
+    
+    # (The rest of this function is the same as your working v6.5, ensuring it returns 4 values)
+    print(f"INFO: Sending transcript to Modal (Insights): {MODAL_INSIGHTS_ENDPOINT_URL}")
     headers = {"Content-Type": "application/json"}
     payload = {"transcript": transcript_text}
-
     try:
-        response = requests.post(MODAL_ENDPOINT_URL, headers=headers, json=payload, timeout=300) # 5 min timeout
-        print(f"INFO: Response from Modal. Status: {response.status_code}")
-        print(f"DEBUG: Raw response text: >>>\n{response.text}\n<<<")
+        response = requests.post(MODAL_INSIGHTS_ENDPOINT_URL, headers=headers, json=payload, timeout=300)
+        print(f"INFO: Response from Modal (Insights). Status: {response.status_code}")
+        print(f"DEBUG: Raw response text (Insights): >>>\n{response.text}\n<<<")
         response.raise_for_status()
-        
         results = response.json()
-        if results is None: # Should not happen if JSON is valid but empty object, but good check
-            raise json.JSONDecodeError("JSON parsed to None", response.text, 0)
-
-        if "error" in results and results["error"]: # Check for error key from Modal service itself
-            print(f"ERROR: AI Service (Modal) reported an error: {results['error']}")
-            # Display the service's error in the summary field, or a dedicated error display
-            return f"AI Service Error: {results['error']}", "", "", ""
-
+        if results is None: raise json.JSONDecodeError("JSON parsed to None", response.text, 0)
+        if "error" in results and results["error"]:
+            return f"AI Service Error (Insights): {results['error']}", "", "", ""
         summary = results.get("summary", "Summary not provided.")
         decisions = results.get("decisions", "Decisions not provided.")
         actions = results.get("actions", "Action items not provided.")
         sentiment = results.get("sentiment", "Sentiment not provided.")
-        
-        print("INFO: Successfully parsed insights.")
         return summary, decisions, actions, sentiment
+    except Exception as e: # Simplified error return for brevity
+        print(f"ERROR in get_all_insights_from_modal: {e}")
+        return f"Error processing insights: {e}", err_decisions, err_actions, err_sentiment
 
-    except requests.exceptions.Timeout:
-        msg = "Request to AI service timed out. Please try again."
+# --- NEW Function to Call Modal Q&A Endpoint ---
+def ask_question_on_transcript(transcript_text, question_text):
+    """Calls the Modal Q&A endpoint."""
+    err_answer = "Error: Could not retrieve answer."
+
+    if MODAL_QNA_ENDPOINT_URL == "YOUR_MODAL_URL_FOR_ai-meeting-processor-v6-6-qna_QNA_ENDPOINT" or \
+       not MODAL_QNA_ENDPOINT_URL or \
+       not MODAL_QNA_ENDPOINT_URL.startswith("https://"):
+        error_msg = "Q&A Modal endpoint URL not correctly configured in `app.py`."
+        print(f"ERROR: {error_msg} Current value: {MODAL_QNA_ENDPOINT_URL}")
+        return error_msg
+
+    if not transcript_text.strip():
+        return "Please provide the meeting transcript before asking a question."
+    if not question_text.strip():
+        return "Please enter a question to ask."
+
+    print(f"INFO: Sending transcript and question to Modal (Q&A): {MODAL_QNA_ENDPOINT_URL}")
+    headers = {"Content-Type": "application/json"}
+    payload = {"transcript": transcript_text, "question": question_text}
+
+    try:
+        response = requests.post(MODAL_QNA_ENDPOINT_URL, headers=headers, json=payload, timeout=180) # Shorter timeout for Q&A
+        print(f"INFO: Response from Modal (Q&A). Status: {response.status_code}")
+        print(f"DEBUG: Raw response text (Q&A): >>>\n{response.text}\n<<<")
+        response.raise_for_status()
+        
+        results = response.json()
+        if results is None: raise json.JSONDecodeError("JSON parsed to None for Q&A", response.text, 0)
+
+        if "error" in results and results["error"]:
+            print(f"ERROR: Q&A Service (Modal) reported an error: {results['error']}")
+            return f"Q&A Service Error: {results['error']}"
+        
+        answer = results.get("answer", "Answer not provided by AI service.")
+        print("INFO: Successfully parsed Q&A answer.")
+        return answer
+
+    except Exception as e: # Simplified error return for brevity
+        msg = f"Error during Q&A processing: {e}"
         print(f"ERROR: {msg}")
-        return msg, err_decisions, err_actions, err_sentiment
-    except requests.exceptions.HTTPError as http_err:
-        msg = f"HTTP error: {http_err.response.status_code} {http_err.response.reason}. Check Modal logs."
-        print(f"ERROR: {msg}\nRaw Response: {http_err.response.text}")
-        return msg, err_decisions, err_actions, err_sentiment
-    except (requests.exceptions.RequestException, json.JSONDecodeError) as req_err:
-        msg = f"Network/JSON error: {req_err}. Check URL & Modal status."
-        print(f"ERROR: {msg}")
-        return msg, err_decisions, err_actions, err_sentiment
-    except Exception as e:
-        msg = f"Critical unexpected error in Gradio app: {e}"
-        print(f"ERROR: {msg}")
-        return msg, err_decisions, err_actions, err_sentiment
+        return msg
 
 # --- Gradio UI Definition ---
-with gr.Blocks(title="AI Meeting Assistant Enhanced", theme=gr.themes.Soft()) as app_ui:
-    gr.Markdown("# 🚀 AI Meeting Assistant - Enhanced Insights 🚀")
-    gr.Markdown("Paste your meeting transcript to extract summary, decisions, action items, and sentiment.")
+with gr.Blocks(title="AI Meeting Assistant Pro", theme=gr.themes.Soft()) as app_ui:
+    gr.Markdown("# 🚀 AI Meeting Assistant Pro (with Q&A!) 🚀")
+    gr.Markdown("Extract insights and ask questions about your meeting transcript.")
 
     with gr.Row():
         transcript_input = gr.Textbox(
@@ -109,46 +173,44 @@ with gr.Blocks(title="AI Meeting Assistant Enhanced", theme=gr.themes.Soft()) as
     
     gr.Markdown("---")
     gr.Markdown("## 💡 Insights Extracted:")
-
     with gr.Tabs():
         with gr.TabItem("Summary"):
             summary_output = gr.Textbox(label="Meeting Summary", interactive=False, lines=10)
         with gr.TabItem("Key Decisions (Markdown)"):
-            # Changed to Markdown component
             decisions_output = gr.Markdown(label="Key Decisions Made")
         with gr.TabItem("Action Items (Markdown)"):
-            # Changed to Markdown component
             action_items_output = gr.Markdown(label="Action Items Identified")
         with gr.TabItem("Sentiment Analysis"):
-            sentiment_output = gr.Textbox(label="Overall Meeting Sentiment", interactive=False, lines=5) # Or gr.Markdown if sentiment output is formatted
+            sentiment_output = gr.Textbox(label="Overall Meeting Sentiment", interactive=False, lines=5)
+
+    gr.Markdown("---")
+    gr.Markdown("## ❓ Ask a Follow-up Question:")
+    question_input = gr.Textbox(label="Your Question About the Transcript", placeholder="e.g., What did Bob say about the MFA library?")
+    ask_qna_button = gr.Button("💬 Ask Question", variant="secondary")
+    qna_answer_output = gr.Textbox(label="Answer", interactive=False, lines=5) # Or gr.Markdown() if you want formatted answers
 
     # --- Connect UI Elements to Functions ---
-    process_button.click(
-        fn=get_all_insights_from_modal,
-        inputs=[transcript_input],
-        outputs=[summary_output, decisions_output, action_items_output, sentiment_output],
-        api_name="get_insights_v2",
-        show_progress="full" # Adds a progress indicator during processing
-    )
+    # List of insight outputs for clearing/loading examples
+    insight_outputs = [summary_output, decisions_output, action_items_output, sentiment_output]
+    # All outputs including Q&A for full clear
+    all_output_fields = insight_outputs + [question_input, qna_answer_output]
 
-    # Temporary list for clearing/loading examples
-    all_outputs = [summary_output, decisions_output, action_items_output, sentiment_output]
-    
-    clear_button.click(
-        fn=clear_all_fields,
-        inputs=None, # No direct inputs needed for clear
-        outputs=[transcript_input] + all_outputs
+
+    process_button.click(
+        fn=get_all_insights_from_modal, inputs=[transcript_input], outputs=insight_outputs,
+        api_name="get_insights_v2", show_progress="full"
     )
     
-    example_button.click(
-        fn=load_example,
-        inputs=None, # No direct inputs needed for load example
-        outputs=[transcript_input] + all_outputs
+    ask_qna_button.click(
+        fn=ask_question_on_transcript, inputs=[transcript_input, question_input], outputs=[qna_answer_output],
+        api_name="ask_qna", show_progress="full"
     )
+    
+    clear_button.click(fn=clear_all_fields, inputs=None, outputs=[transcript_input] + all_output_fields)
+    example_button.click(fn=load_example, inputs=None, outputs=[transcript_input] + all_output_fields)
 
     gr.Markdown("---")
     gr.Markdown("Powered by Gradio & Modal. For the Hugging Face Agents & MCP Hackathon.")
 
-# --- Launch the Gradio App ---
 if __name__ == "__main__":
     app_ui.launch(debug=True, show_error=True)
